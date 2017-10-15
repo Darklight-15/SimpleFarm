@@ -5,7 +5,7 @@ using System.Collections;
 using UnityEngine.EventSystems;
 using SimpleFarmNamespace; 
 
-//Guia de Canales
+//Channels Guide
 
 public class ChannelsGuide : MonoBehaviour {
 
@@ -31,13 +31,7 @@ public class ChannelsGuide : MonoBehaviour {
     private void Update()
     {
         //print("Scrollbar Value: " + ChVGuideScrollbar.value);
-        //Clock.text = DateTime.Now.Hour.ToString();
-        //Clock.text = System.DateTime.UtcNow.ToString();
-        if(Current == ActualHour)
-        {
-            left.interactable = false;
-        }
-        
+        Clock.text = DateTime.Now.Hour.ToString();
     }
 
     private void Start()
