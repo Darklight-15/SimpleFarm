@@ -13,11 +13,11 @@ public class ChannelsGuide : MonoBehaviour {
     private EventSystem EvSys;
     public ProgramScript Program;
     public GameObject ActualGameObjectSelected, FirstSelected;
-    public int HorNavIndex, VerNavIndex, NumCol, NumRows, Current, ActualHour;
+    public int HorNavIndex, VerNavIndex, NumChannels, NumPrograms, Current, ActualHour;
     public double JumpHor, JumpVer;
     private Scrollbar ChHorScbr;
     private Scrollbar ChVerScbr;
-    bool ReadyInstantiate;
+    public bool ReadyInstantiate;
 
     //Clock
     private Text Clock;
@@ -36,12 +36,6 @@ public class ChannelsGuide : MonoBehaviour {
         Clock.text = DateTime.Now.ToString("HH:mm:ss");
         Date.text = DateTime.Now.ToString("D");
         //Clock.text = System.DateTime.UtcNow.ToString();
-        if (Current == ActualHour)
-        {
-            left.interactable = false;
-        }
-        //Change
-        
     }
 
     private void Start()
@@ -86,24 +80,12 @@ public class ChannelsGuide : MonoBehaviour {
     {
         
         InitializeValues();
-        
-        int it1;
 
         yield return new WaitForSeconds(0.5f);
 
-        InstantiatePrefab("Prefabs/ProgramationGuide/Channel", "Canvas/Controller/ProgramationPanel/ChannelsContainer/ChannelsContainerGrid", 12, "Canal", "canal");
+        StartCoroutine(Instantiate());
 
-        NumCol = 12;
-        NumRows = 24;
-
-        for (it1=0; it1 < NumCol; it1++)
-        {
-            InstantiatePrefab("Prefabs/ProgramationGuide/Program", "Canvas/Controller/ProgramationPanel/ChannelsContainer/ChannelsContainerGrid/"+ "Canal" + it1 +"/Programs/ProgramsGrid", 24, "Reporte"+ it1 + "-", "programa");
-        }
-
-        JumpVer = (double)1 / (NumCol - 8);
-
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitUntil(()=>(ReadyInstantiate == true));
 
         FirstSelected = GameObject.Find("Reporte0-0");
         EvSys.firstSelectedGameObject = FirstSelected;
@@ -120,21 +102,50 @@ public class ChannelsGuide : MonoBehaviour {
        
     }
 
+    private IEnumerator Instantiate()
+    {
+        int it1;
+        InstantiatePrefab("Prefabs/ProgramationGuide/Channel", "Canvas/Controller/ProgramationPanel/ChannelsContainer/ChannelsContainerGrid", 12, "Canal", "canal");
+
+        NumChannels = 12;
+        NumPrograms = 24;
+
+        for (it1 = 0; it1 < NumChannels; it1++)
+        {
+           InstantiatePrefab("Prefabs/ProgramationGuide/Program", "Canvas/Controller/ProgramationPanel/ChannelsContainer/ChannelsContainerGrid/" + "Canal" + it1 + "/Programs/ProgramsGrid", 24, "Reporte" + it1 + "-", "programa");
+        }
+
+        JumpVer = (double)1 / (NumChannels - 8);
+
+        
+        ReadyInstantiate = true;
+        yield break;
+    }
+
     public void CheckNextSelectableHor()
     {
-        if(EvSys.currentSelectedGameObject != null)
+        if (Current == ActualHour)
         {
-            if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight())
+            left.interactable = false;
+        }else
+        {
+            if (EvSys.currentSelectedGameObject != null)
             {
-                right.interactable = false;
-            }
-            else { right.interactable = true; }
+                if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight())
+                {
+                    right.interactable = false;
+                }
+                else { right.interactable = true; }
 
-            if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnLeft() || Current == ActualHour)
-            {
-                left.interactable = false;
+                if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnLeft())
+                {
+                    left.interactable = false;
+                }
+                else
+                {
+                    left.interactable = true;
+                }
             }
-            else { left.interactable = true; }
         }
     }
 
@@ -169,7 +180,12 @@ public class ChannelsGuide : MonoBehaviour {
         }
     }
 
-	public void MoveHorizontal(string direction) {
+    public void MoveHorizontal(string direction)
+    {
+        StartCoroutine(CO_MoveHorizontal(direction));
+    }
+
+	public IEnumerator CO_MoveHorizontal(string direction) {
 
         double aux;
 
@@ -227,6 +243,8 @@ public class ChannelsGuide : MonoBehaviour {
                         
                     break;
             }
+
+            yield return new WaitForSeconds(0.3f);
 
             CheckNextSelectableHor();
         }
@@ -339,6 +357,7 @@ public class ChannelsGuide : MonoBehaviour {
             up.interactable = true;
             down.interactable = true;
         }
+
         yield break;
     }
 
@@ -370,11 +389,6 @@ public class ChannelsGuide : MonoBehaviour {
             GameObject Copy = Instantiate(prefabInstance, GameObject.Find(parentPath).transform) as GameObject;
             Copy.name = name + i;
 
-            if (i == 0)
-            {
-                FirstSelected = Copy;
-            }
-
             switch (type)
             {
                 case "canal":
@@ -385,11 +399,13 @@ public class ChannelsGuide : MonoBehaviour {
                     Copy.GetComponentInChildren<ProgramScript>().Position = i;
                     Copy.GetComponentInChildren<ProgramScript>().ProgramID = i;
                     Copy.GetComponentInChildren<ProgramScript>().Name = "Programa" + i;
+                    Copy.GetComponentInChildren<ProgramScript>().Info = "Info" + i + ":" + "Esta es una descripcion del programa";
                     Copy.GetComponentInChildren<Text>().text = Copy.GetComponentInChildren<ProgramScript>().name;
                     break;
             }
         }
 
+        ReadyInstantiate = true;
     }
 
     public int Hour;
@@ -418,5 +434,10 @@ public class ChannelsGuide : MonoBehaviour {
             //print(HourC);
             yield return new WaitForSeconds(1.0f);
         }
+    }
+
+    public void Stop()
+    {
+        ReadyInstantiate = false;
     }
 }

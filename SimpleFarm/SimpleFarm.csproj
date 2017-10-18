@@ -101,6 +101,7 @@
     <Compile Include="Assets\OtherScripts\ThemeClass.cs" />
     <Compile Include="Assets\OtherScripts\WindowManager.cs" />
     <Compile Include="Assets\Scripts\ChannelsGuide.cs" />
+    <Compile Include="Assets\Scripts\InsertChannels.cs" />
     <Compile Include="Assets\Scripts\ProgramScript.cs" />
     <Compile Include="Assets\Scripts\SimpleFarmNamespace.cs" />
   </ItemGroup>
