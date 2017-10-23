@@ -8,18 +8,20 @@ using SimpleFarmNamespace;
 //Guia de Canales
 
 public class ChannelsGuide : MonoBehaviour {
-    //Test
+
     //Navigation
+
     private EventSystem EvSys;
     public ProgramScript Program;
     public GameObject ActualGameObjectSelected, FirstSelected;
-    public int HorNavIndex, VerNavIndex, NumChannels, NumPrograms, Current, ActualHour;
+    public int HorNavIndex, VerNavIndex, NumChannels, NumPrograms, CurrentColumn, ActualHour;
     public double JumpHor, JumpVer;
     private Scrollbar ChHorScbr;
     private Scrollbar ChVerScbr;
     public bool ReadyInstantiate;
 
     //Clock
+
     private Text Clock;
     private Text Date;
     
@@ -32,10 +34,8 @@ public class ChannelsGuide : MonoBehaviour {
     
     private void Update()
     {
-        //print("Scrollbar Value: " + ChVGuideScrollbar.value);
         Clock.text = DateTime.Now.ToString("HH:mm:ss");
         Date.text = DateTime.Now.ToString("D");
-        //Clock.text = System.DateTime.UtcNow.ToString();
     }
 
     private void Start()
@@ -57,14 +57,14 @@ public class ChannelsGuide : MonoBehaviour {
         EvSys = GameObject.Find("EventSystem").GetComponent<EventSystem>();
         ChVerScbr = GameObject.Find("ChVertical-scbr").GetComponent<Scrollbar>();
         ChHorScbr = GameObject.Find("ChHorizontal-scbr").GetComponent<Scrollbar>();
-        right.onClick.AddListener(() => MoveHorizontal("right"));
-        left.onClick.AddListener(() => MoveHorizontal("left"));
-        up.onClick.AddListener(() => MoveVertical("up"));
-        down.onClick.AddListener(() => MoveVertical("down"));
+        right.onClick.AddListener(() => Move("right"));
+        left.onClick.AddListener(() => Move("left"));
+        up.onClick.AddListener(() => Move("up"));
+        down.onClick.AddListener(() => Move("down"));
 
         HorNavIndex = 1;
         VerNavIndex = 1;
-        Current = 12;
+        CurrentColumn = 12;
         ActualHour = 12;
         JumpHor = 0.04760598f;
         JumpVer = 0.0f;
@@ -72,8 +72,7 @@ public class ChannelsGuide : MonoBehaviour {
         //Clock
         Hour = 12;
         Clock = GameObject.Find("Clock/Text").GetComponent<Text>();
-        Date = GameObject.Find("Date/Text").GetComponent<Text>();
-        
+        Date = GameObject.Find("Date/Text").GetComponent<Text>(); 
     }
 
     private IEnumerator Initialize()
@@ -87,83 +86,102 @@ public class ChannelsGuide : MonoBehaviour {
 
         yield return new WaitUntil(()=>(ReadyInstantiate == true));
 
-        FirstSelected = GameObject.Find("Reporte0-0");
         EvSys.firstSelectedGameObject = FirstSelected;
         EvSys.SetSelectedGameObject(FirstSelected);
         ActualGameObjectSelected = FirstSelected;
 
-        CheckNextSelectableHor();
-        CheckNextSelectableVer();
+        CheckNextSelectable("horizontal");
+        CheckNextSelectable("vertical");
 
         HourC = DateTime.Now.Hour;
         SetProgramationToHour(Hour);
 
-        StartCoroutine(CheckHour());
+        StartCoroutine(CO_CheckHour());
        
     }
 
     private IEnumerator Instantiate()
     {
-        int it1;
-        InstantiatePrefab("Prefabs/ProgramationGuide/Channel", "Canvas/Controller/ProgramationPanel/ChannelsContainer/ChannelsContainerGrid", 12, "Canal", "canal");
+        int it1, it2;
 
         NumChannels = 12;
         NumPrograms = 24;
 
-        for (it1 = 0; it1 < NumChannels; it1++)
+        for(it1 = 0; it1 < NumChannels; it1++)
         {
-           InstantiatePrefab("Prefabs/ProgramationGuide/Program", "Canvas/Controller/ProgramationPanel/ChannelsContainer/ChannelsContainerGrid/" + "Canal" + it1 + "/Programs/ProgramsGrid", 24, "Reporte" + it1 + "-", "programa");
+            GameObject prefabCanal = Resources.Load("Prefabs/ProgramationGuide/Channel") as GameObject;
+            GameObject CopyCanal = Instantiate(prefabCanal, GameObject.Find("ChannelsContainerGrid").transform);
+            CopyCanal.name = "Canal" + it1;
+            CopyCanal.GetComponentInChildren<Text>().text = CopyCanal.name;
+            CopyCanal.transform.Find("Programs").GetComponent<ScrollRect>().horizontalScrollbar = ChHorScbr;
+            
+            for (it2 = 0; it2 < NumPrograms; it2++)
+            {
+                GameObject prefabProgram = Resources.Load("Prefabs/ProgramationGuide/Program") as GameObject;
+                GameObject CopyProgram = Instantiate(prefabProgram, GameObject.Find("Canvas/Controller/ProgramationPanel/ChannelsContainer/ChannelsContainerGrid/" + CopyCanal.name + "/Programs/ProgramsGrid").transform);
+                CopyProgram.name = "Canal-" + it1 + "-Program-" + it2;
+                CopyProgram.GetComponentInChildren<ProgramScript>().Position = it2;
+                CopyProgram.GetComponentInChildren<ProgramScript>().ProgramID = it2;
+                CopyProgram.GetComponentInChildren<ProgramScript>().Name = "Programa" + it2;
+                CopyProgram.GetComponentInChildren<ProgramScript>().Info = "Info" + it2 + ":" + "Esta es una descripcion del programa";
+                CopyProgram.GetComponentInChildren<Text>().text = CopyProgram.GetComponentInChildren<ProgramScript>().name;
+
+                if ( it1 == 0 && it2 == 0)
+                {
+                    FirstSelected = CopyProgram;
+                    print(FirstSelected.name);
+                }
+            }
+            
         }
 
         JumpVer = (double)1 / (NumChannels - 8);
 
-        
         ReadyInstantiate = true;
         yield break;
     }
 
-    public void CheckNextSelectableHor()
+    public void CheckNextSelectable(string direction)
     {
-        if (Current == ActualHour)
+        if (CurrentColumn == ActualHour)
         {
             left.interactable = false;
         }else
         {
             if (EvSys.currentSelectedGameObject != null)
             {
-                if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight())
+                if(direction == "horizontal")
                 {
-                    right.interactable = false;
-                }
-                else { right.interactable = true; }
+                    if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight())
+                    {
+                        right.interactable = false;
+                    }
+                    else { right.interactable = true; }
 
-                if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnLeft())
-                {
-                    left.interactable = false;
+                    if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnLeft())
+                    {
+                        left.interactable = false;
+                    }
+                    else
+                    {
+                        left.interactable = true;
+                    }
                 }
-                else
+                if (direction == "vertical")
                 {
-                    left.interactable = true;
+                    if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown())
+                    {
+                        down.interactable = false;
+                    }
+                    else { down.interactable = true; }
+
+                    if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnUp())
+                    {
+                        up.interactable = false;
+                    }
+                    else { up.interactable = true; }
                 }
             }
-        }
-    }
-
-    public void CheckNextSelectableVer()
-    {
-        if (EvSys.currentSelectedGameObject != null)
-        {
-            if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown())
-            {
-                down.interactable = false;
-            }
-            else { down.interactable = true; }
-
-            if (!EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnUp())
-            {
-                up.interactable = false;
-            }
-            else { up.interactable = true; }
         }
     }
 
@@ -180,20 +198,30 @@ public class ChannelsGuide : MonoBehaviour {
         }
     }
 
-    public void MoveHorizontal(string direction)
+    public void Move(string direction)
     {
-        StartCoroutine(CO_MoveHorizontal(direction));
+        if(!MoveActive)
+            StartCoroutine(CO_Move(direction));
     }
 
-	public IEnumerator CO_MoveHorizontal(string direction) {
+    private bool MoveActive;
+	public IEnumerator CO_Move(string direction) {
 
+        MoveActive = true;
         double aux;
 
         if (ActualGameObjectSelected != null)
         {
             EvSys.SetSelectedGameObject(ActualGameObjectSelected);
 
-            CheckNextSelectableHor();
+            if(direction == "right" || direction == "left")
+            {
+                CheckNextSelectable("horizontal");
+            }
+            if(direction == "up" || direction == "down")
+            {
+                CheckNextSelectable("vertical");
+            }
 
             switch (direction)
             {
@@ -201,7 +229,7 @@ public class ChannelsGuide : MonoBehaviour {
                     if (EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight())
                     {
                         HorNavIndex++;
-                        Current++;
+                        CurrentColumn++;
                         ActualGameObjectSelected = GameObject.Find(EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight().name);
                         EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight().Select();
                         EvSys.SetSelectedGameObject(ActualGameObjectSelected);
@@ -224,7 +252,7 @@ public class ChannelsGuide : MonoBehaviour {
                     if (EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnLeft())
                     {
                         HorNavIndex--;
-                        Current--;
+                        CurrentColumn--;
                         ActualGameObjectSelected = GameObject.Find(EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnLeft().name);
                         EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnLeft().Select();
                         EvSys.SetSelectedGameObject(ActualGameObjectSelected);
@@ -242,26 +270,7 @@ public class ChannelsGuide : MonoBehaviour {
                     }
                         
                     break;
-            }
 
-            yield return new WaitForSeconds(0.3f);
-
-            CheckNextSelectableHor();
-        }
-    }
-
-    public void MoveVertical(string direction)
-    {
-        double aux;
-
-        if (ActualGameObjectSelected != null)
-        {
-            EvSys.SetSelectedGameObject(ActualGameObjectSelected);
-
-            CheckNextSelectableVer();
-
-            switch (direction)
-            {
                 case "down":
                     if (EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown())
                     {
@@ -269,8 +278,8 @@ public class ChannelsGuide : MonoBehaviour {
                         ActualGameObjectSelected = GameObject.Find(EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown().name);
                         EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnDown().Select();
                         EvSys.SetSelectedGameObject(ActualGameObjectSelected);
+                        print(ActualGameObjectSelected.name);
 
-                        
                         if (VerNavIndex > 8)
                         {
                             aux = ChVerScbr.value - JumpVer;
@@ -280,9 +289,9 @@ public class ChannelsGuide : MonoBehaviour {
                             }
                             VerNavIndex = 8;
                         }
-                        
+
                     }
-                        
+
                     break;
 
                 case "up":
@@ -294,7 +303,7 @@ public class ChannelsGuide : MonoBehaviour {
                         EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnUp().Select();
                         EvSys.SetSelectedGameObject(ActualGameObjectSelected);
 
-                        
+
                         if (VerNavIndex < 1)
                         {
                             aux = ChVerScbr.value + JumpVer;
@@ -309,8 +318,20 @@ public class ChannelsGuide : MonoBehaviour {
                     break;
             }
 
-            CheckNextSelectableVer();
+            yield return new WaitForSeconds(0.3f);
+
+            if (direction == "right" || direction == "left")
+            {
+                CheckNextSelectable("horizontal");
+            }
+
+            if (direction == "up" || direction == "down")
+            {
+                CheckNextSelectable("vertical");
+            }
         }
+        MoveActive = false;
+        yield break;
     }
 
     public IEnumerator LerpFloatTo(float end, float atime, string direction) // Moves scrollbar value to previous or next page
@@ -346,14 +367,14 @@ public class ChannelsGuide : MonoBehaviour {
 
         if (direction == "right" || direction == "left")
         {
-            CheckNextSelectableHor();
+            CheckNextSelectable("horizontal");
             left.interactable = true;
             right.interactable = true;
         }
 
         if (direction == "up" || direction == "down")
         {
-            CheckNextSelectableVer();
+            CheckNextSelectable("vertical");
             up.interactable = true;
             down.interactable = true;
         }
@@ -364,10 +385,11 @@ public class ChannelsGuide : MonoBehaviour {
     public void SetProgramationToHour(int hour)
     {
         double aux;
+
         EvSys.firstSelectedGameObject = FirstSelected;
         EvSys.SetSelectedGameObject(FirstSelected);
 
-        Current = hour;
+        CurrentColumn = hour;
         ActualHour = hour;
         aux = JumpHor * hour;
         ChHorScbr.value = (float) aux;
@@ -378,34 +400,6 @@ public class ChannelsGuide : MonoBehaviour {
             EvSys.currentSelectedGameObject.GetComponent<Selectable>().FindSelectableOnRight().Select();
             EvSys.SetSelectedGameObject(ActualGameObjectSelected);
         }
-    }
-
-    public void InstantiatePrefab(string prefabPath, string parentPath, int numItems, string name, string type)
-    {
-        GameObject prefabInstance = Resources.Load(prefabPath) as GameObject;
-
-        for (int i = 0; i < numItems; i++)
-        {
-            GameObject Copy = Instantiate(prefabInstance, GameObject.Find(parentPath).transform) as GameObject;
-            Copy.name = name + i;
-
-            switch (type)
-            {
-                case "canal":
-                    Copy.transform.Find("Programs").GetComponent<ScrollRect>().horizontalScrollbar = ChHorScbr;
-                    break;
-
-                case "programa":
-                    Copy.GetComponentInChildren<ProgramScript>().Position = i;
-                    Copy.GetComponentInChildren<ProgramScript>().ProgramID = i;
-                    Copy.GetComponentInChildren<ProgramScript>().Name = "Programa" + i;
-                    Copy.GetComponentInChildren<ProgramScript>().Info = "Info" + i + ":" + "Esta es una descripcion del programa";
-                    Copy.GetComponentInChildren<Text>().text = Copy.GetComponentInChildren<ProgramScript>().name;
-                    break;
-            }
-        }
-
-        ReadyInstantiate = true;
     }
 
     public int Hour;
@@ -426,12 +420,11 @@ public class ChannelsGuide : MonoBehaviour {
         }
     }
 
-    private IEnumerator CheckHour()
+    private IEnumerator CO_CheckHour()
     {
         while (true)
         {
             HourC = DateTime.Now.Hour;
-            //print(HourC);
             yield return new WaitForSeconds(1.0f);
         }
     }
