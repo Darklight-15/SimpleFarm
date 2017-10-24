@@ -129,7 +129,6 @@ public class ChannelsGuide : MonoBehaviour {
                 if ( it1 == 0 && it2 == 0)
                 {
                     FirstSelected = CopyProgram;
-                    print(FirstSelected.name);
                 }
             }
             
