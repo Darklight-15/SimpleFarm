@@ -3,11 +3,34 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using UnityEngine.EventSystems;
+using System.Collections.Generic;
 using SimpleFarmNamespace;
+using System.Linq;
 
 //Guia de Canales
 
 public class ChannelsGuide : MonoBehaviour {
+    
+    //Scripts
+
+    ETVServerManager ServerScrpt;
+
+    //Lists
+
+    private List<Canal> Canales;
+    public List<Canal> CanalesFromBD{
+        get
+        {
+            return Canales;
+        }
+        set
+        {
+            if (!(Canales == value))
+            {
+                Canales = value;
+            }
+        }
+    }
 
     //Navigation
 
@@ -54,6 +77,8 @@ public class ChannelsGuide : MonoBehaviour {
         down = GameObject.Find("Down-btn").GetComponent<Button>();
 
         //Navigation
+        ServerScrpt = GameObject.Find("Controller").GetComponent<ETVServerManager>();
+        Canales = new List<Canal>();
         EvSys = GameObject.Find("EventSystem").GetComponent<EventSystem>();
         ChVerScbr = GameObject.Find("ChVertical-scbr").GetComponent<Scrollbar>();
         ChHorScbr = GameObject.Find("ChHorizontal-scbr").GetComponent<Scrollbar>();
@@ -80,7 +105,7 @@ public class ChannelsGuide : MonoBehaviour {
         
         InitializeValues();
 
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitUntil(()=> ServerScrpt.Ready);
 
         StartCoroutine(Instantiate());
 
@@ -329,7 +354,9 @@ public class ChannelsGuide : MonoBehaviour {
                 CheckNextSelectable("vertical");
             }
         }
+
         MoveActive = false;
+
         yield break;
     }
 

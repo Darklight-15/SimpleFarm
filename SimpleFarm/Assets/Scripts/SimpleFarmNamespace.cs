@@ -21,8 +21,21 @@ namespace SimpleFarmNamespace{
         void Stop();
     }
 
+    public struct Canal
+    {
+        public int id;
+        public string nombre;
+
+        public Canal(int i, string n)
+        {
+            id = i;
+            nombre = n;
+        }
+    }
+
     public class AuxFunctions
     {
+
         //Has Changed Function
         static public bool ValueChanged<T>(string type, T storedValue, T newValue) where T : System.IComparable<T>
         {
