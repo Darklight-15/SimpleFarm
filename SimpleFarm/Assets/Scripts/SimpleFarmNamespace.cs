@@ -33,6 +33,24 @@ namespace SimpleFarmNamespace{
         }
     }
 
+    public struct Programa
+    {
+        public int id;
+        public string nombre;
+        public string info;
+        public int duracion;
+        public int posicion;
+
+        public Programa(int i, string n, string inf, int du, int po)
+        {
+            id = i;
+            nombre = n;
+            info = inf;
+            duracion = du;
+            posicion = po;
+        }
+    }
+
     public class AuxFunctions
     {
 
