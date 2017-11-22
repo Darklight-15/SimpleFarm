@@ -5,7 +5,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
-
 namespace SimpleFarmNamespace{
 
     public interface IBasicInterface{
@@ -25,11 +24,13 @@ namespace SimpleFarmNamespace{
     {
         public int id;
         public string nombre;
+        public int tipo;
 
-        public Canal(int i, string n)
+        public Canal(int i, string n, int t)
         {
             id = i;
             nombre = n;
+            tipo = t;
         }
     }
 
@@ -55,7 +56,7 @@ namespace SimpleFarmNamespace{
     {
 
         //Has Changed Function
-        static public bool ValueChanged<T>(string type, T storedValue, T newValue) where T : System.IComparable<T>
+        public static bool ValueChanged<T>(string type, T storedValue, T newValue) where T : System.IComparable<T>
         {
             if (storedValue.CompareTo(newValue) != 0)
             {
@@ -66,13 +67,13 @@ namespace SimpleFarmNamespace{
         }
 
         //RGBA with especific values
-        static public Color ConvertColorRGBA(float r, float g, float b, float a)
+        public static Color ConvertColorRGBA(float r, float g, float b, float a)
         {
             return new Color(r / 255.0f, g / 255.0f, b / 255.0f, a);
         }
 
         //Changes color of image in an especific time interval. MUST HAVE COMPONENT IMAGE.
-        static public void ChangeColor(string path, Color endColor, float totalTime)
+        public static void ChangeColor(string path, Color endColor, float totalTime)
         {
             float elapsedTime = 0.0f;
 
@@ -84,7 +85,7 @@ namespace SimpleFarmNamespace{
         }
 
         // Lerp int values in time interval.
-        static IEnumerator LerpInt(int start, int end, float sec)
+        public static IEnumerator LerpInt(int start, int end, float sec)
         {
             for (int i = start; i <= end; i++)
             {
@@ -94,7 +95,7 @@ namespace SimpleFarmNamespace{
         }
 
         // Lerp float values in time interval.
-        static public IEnumerator LerpFloat(string elem, float start, float end, float atime)
+        public static IEnumerator LerpFloat(string elem, float start, float end, float atime)
         {
             for (float t = 0.0f; t <= 1.0; t += Time.deltaTime / atime)
             {
@@ -104,7 +105,7 @@ namespace SimpleFarmNamespace{
         }
 
         // Moves UI on x axis with property value
-        static public IEnumerator LerpUI(string elemName, float start, float end, string axis, float speed) // Moves scrollbar value to previous or next page
+        public static IEnumerator LerpUI(string elemName, float start, float end, string axis, float speed) // Moves scrollbar value to previous or next page
         {
             switch (axis)
             {
@@ -127,7 +128,7 @@ namespace SimpleFarmNamespace{
         }
 
         // Encodes QR code to img
-        static private Color32[] Encode(string textForEncoding, int width, int height) //Encode QR code.
+        private static Color32[] Encode(string textForEncoding, int width, int height) //Encode QR code.
         {
             var writer = new BarcodeWriter
             {
@@ -142,7 +143,7 @@ namespace SimpleFarmNamespace{
         }
 
         // Generate QR code with a text given
-        static public Texture2D generateQR(string text) //generates QR code and returns as Texture2D
+        public static Texture2D generateQR(string text) //generates QR code and returns as Texture2D
         {
             var encoded = new Texture2D(256, 256);
             var color32 = Encode(text, encoded.width, encoded.height);
@@ -152,7 +153,7 @@ namespace SimpleFarmNamespace{
         }
 
         //Splits string due to index value
-        static public string GetDataValue(string data, string index)
+        public static string GetDataValue(string data, string index)
         {
             string value = data.Substring(data.IndexOf(index) + index.Length);
             if (value.Contains("|")) value = value.Remove(value.IndexOf("|"));
@@ -160,12 +161,23 @@ namespace SimpleFarmNamespace{
         }
 
         //Authenticate for SAP Hana Cloud
-        static public string Authenticate(string username, string password)
+        public static string Authenticate(string username, string password)
         {
             string auth = username + ":" + password;
             auth = Convert.ToBase64String(System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(auth));
             auth = "Basic " + auth;
             return auth;
+        }
+
+        public static string GetGameObjectPath(ref GameObject obj)
+        {
+            string path = "/" + obj.name;
+            while (obj.transform.parent != null)
+            {
+                obj = obj.transform.parent.gameObject;
+                path = "/" + obj.name + path;
+            }
+            return path;
         }
     }
 }

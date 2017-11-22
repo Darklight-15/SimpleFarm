@@ -1,100 +1,404 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using SimpleFarmNamespace;
-using System.Linq;
 
 public class ETVServerManager : MonoBehaviour
 {
+    //State & Identity
+
+    public bool Online;
+    public bool OnlineFromBD
+    {
+        get
+        {
+            return Online;
+        }
+
+        set
+        {
+
+            if (AuxFunctions.ValueChanged("online", Online, value))//Change ui online status
+            {
+                Online = value;
+
+                ChGhideScript.Online = value;
+
+                if (value == true)
+                {
+                    OnlineUI.text = "Online";
+                    AuxFunctions.ChangeColor("Online", AuxFunctions.ConvertColorRGBA(103, 221, 127, 1), 1f);
+                }
+                else
+                {
+                    OnlineUI.text = "Offline";
+                    AuxFunctions.ChangeColor("Online", AuxFunctions.ConvertColorRGBA(247, 125, 115, 1), 1f);
+                }
+            }
+        }
+    }
 
     public bool Ready;
-
-    ChannelsGuide ChGuideScrpt;
-    
-    List<Canal> ListCanales;
-    List<Programa> ListProgramas;
+    public bool ReadyCanales;
+    public bool ReadyProgramation;
 
     public int NumChannels;
     public int NumPrograms;
-
-    public string opcion;
     
-    //Channel List
-    public int ChannelID;
-    public string ChannelName;
+    //Scripts
 
-    //Program Info
-    public int rowID;
-    public int ChannelIDInsert;
+    ChannelsGuide ChGhideScript;
 
-    public int programID;
-    public string programName;
-    public string programInfo;
-    public int programDuration;
-    public int programPosition;
-    public string[] a;
+    //Remote Control
 
-    public void Start()
+    List<Canal> ListCanales;
+    public string Canales;
+    public string CanalesFromBD
+    {
+        get
+        {
+            return Canales;
+        }
+
+        set
+        {
+            if (AuxFunctions.ValueChanged("Canales", Canales, value))
+            {
+                Canales = value;
+                ParseCanales();
+            }
+        }
+    }
+
+    public string ProgramacionFromBD;
+    List<Programa> ListProgramas;
+
+    public int Action;
+    public int ActionFromBD
+    {
+        get
+        {
+            return Action;
+        }
+
+        set
+        {
+            if (Action != value)
+            {
+                Action = value;
+                ChGhideScript.ActionFromBD = Action;
+            }
+        }
+    }
+
+    public int NumCanal;
+    public int NumCanalFromBD
+    {
+        get
+        {
+            return NumCanal;
+        }
+
+        set
+        {
+            if(NumCanal != value)
+            {
+                NumCanal = value;
+                ChGhideScript.NumCanalFromBD = NumCanal;
+            }
+        }
+    }
+    
+    //UI
+
+    private Text OnlineUI;
+
+    //Start APP
+
+    private void Update()
+    {
+        print("Server Action: " + Action);
+    }
+
+    public void Play()
     {
         StartCoroutine(Initialize());
     }
 
     public IEnumerator Initialize()
     {
+        InitializeValues();
+
+        StartCoroutine(CR_GetOnline());
+
+        print("Waiting for Online");
+        yield return new WaitUntil(() => Online == true);
+
+        StartCoroutine(CR_GetChannels());
+
+        yield return new WaitUntil(() => ReadyCanales);
+
+        //StartCoroutine(Insert());        
+        //yield return new WaitUntil(() => ReadyInsertProgramation);
+
+        StartCoroutine(CR_GetAction());
+
+        Ready = true;
+
+        print("Ready Server");
+
+        yield break;
+    }
+
+    public void InitializeValues()
+    {
+        Online = false;
         Ready = false;
-
-        Canales = "";
-        NumChannels = 1;
-        NumPrograms = 24;
-        ChannelIDInsert = 0;
-
-        ChGuideScrpt = GameObject.Find("Controller").GetComponent<ChannelsGuide>();
-        
-        ListCanales = new List<Canal>();
-        ListProgramas = new List<Programa>();
-
-        ReadyInsertProgramation = false;
-        ReadyInsertCanal = false;
         ReadyCanales = false;
         ReadyProgramation = false;
 
-        StartCoroutine(ReadCanales());
+        ChGhideScript = GameObject.Find("Controller").GetComponent<ChannelsGuide>();
+
+        StartCoroutine(CR_SendToServer("insertar-accion", 0, 0));
+
+        Canales = "";
+        NumChannels = 12;
+        NumPrograms = 24;
         
-        yield return new WaitUntil(() => ReadyCanales);
+        Action = 0;
+        NumCanal = 0;
 
-        //StartCoroutine(Insert());
+        ListCanales = new List<Canal>();
+        ListProgramas = new List<Programa>();
 
-        //yield return new WaitUntil(() => ReadyInsertProgramation);
+        //UI Values
 
-        Ready = true;
-        print("Ready Server");
+        OnlineUI = GameObject.Find("Online/Text").GetComponent<Text>();
+        OnlineUI.text = "Offline";
 
-        yield return null;
+        //ChannelIDInsert = 0;
+        //ReadyInsertProgramation = false;
+        //ReadyInsertCanal = false;
+    }
+    
+    public void ParseCanales()
+    {
+        string[] items;
+        items = CanalesFromBD.Split(';');
+
+        for (int i = 0; i < items.Length - 1; i++)
+        {
+            ListCanales.Add(new Canal(int.Parse(AuxFunctions.GetDataValue(items[i], "id:")), AuxFunctions.GetDataValue(items[i], "nombre:"), int.Parse(AuxFunctions.GetDataValue(items[i], "tipo:") ) ) );
+        }
+
+        ChGhideScript.CanalesFromBD = ListCanales;
     }
 
+    public void ParseProgramacion(string programacion, string type)
+    {
+        string[] items;
+        items = programacion.Split(';');
+        ListProgramas.Clear();
+        for (int i = 0; i < items.Length - 1; i++)
+        {
+            ListProgramas.Add(
+                new Programa(
+                    int.Parse(AuxFunctions.GetDataValue(items[i], "id:")), 
+                    AuxFunctions.GetDataValue(items[i],"nombre:"),
+                    AuxFunctions.GetDataValue(items[i], "info:"),
+                    int.Parse(AuxFunctions.GetDataValue(items[i], "duracion:")),
+                    int.Parse(AuxFunctions.GetDataValue(items[i], "posicion:"))
+                )
+            );
+                
+        }
+
+        if (type == "instantiate")
+        {
+            ChGhideScript.Programacion = ListProgramas;
+        }
+            
+        if(type == "channel")
+        {
+            ChGhideScript.Progch = ListProgramas;
+        }
+    }
+
+    public void GetProgramation(int CanalID, string type)
+    {
+        ReadyProgramation = false;
+        StartCoroutine(CR_GetProgramation(CanalID, type));
+    }
+
+    //Server Talk
+    
+    private IEnumerator CR_GetOnline()
+    {
+        WWW OnlineStatus;
+
+        while (true)
+        {
+            OnlineStatus = new WWW("https://commendable-rigs.000webhostapp.com");
+
+            yield return OnlineStatus;
+
+            if (OnlineStatus.error == null)
+            {
+                OnlineFromBD = true;
+            }
+            else
+            {
+                OnlineFromBD = false;
+            }
+
+            yield return new WaitForSeconds(1.0f);
+        }
+    }
+
+    private IEnumerator CR_GetChannels()
+    {
+        WWWForm form = new WWWForm();
+
+        form.AddField("opcion", "leer-canales");
+
+        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+
+        yield return www;
+
+        if (www.error == null)
+            CanalesFromBD = www.text;
+            
+        ReadyCanales = true;
+
+        yield break;
+    }
+
+    private IEnumerator CR_GetProgramation(int CanalID, string type)
+    {
+        WWWForm form = new WWWForm();
+
+        form.AddField("opcion", "leer-programacion");
+        form.AddField("canalProgramacion", CanalID);
+
+        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+
+        yield return www;
+
+        if (www.error == null)
+        {
+            ParseProgramacion(www.text, type);
+        }
+        else
+            print("Error");
+
+        yield return new WaitForSeconds(0.1f);
+
+        ReadyProgramation = true;
+
+        yield break;
+    }
+
+    private IEnumerator CR_GetAction()
+    {
+        WWWForm form;
+        WWW ActionQuery;
+        string[] DatosControl;
+
+        form = new WWWForm();
+        form.AddField("opcion", "leer-accion");
+
+        while (true)
+        {
+            ActionQuery = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+            //WWW zoomQuery = new WWW("http://localhost/indicadores/revisarElementos.php");
+
+            yield return ActionQuery;
+
+            if (ActionQuery.error == null)
+            {
+                DatosControl = ActionQuery.text.ToString().Split(new string[] { "-" }, StringSplitOptions.None);
+                NumCanalFromBD = int.Parse(DatosControl[1]);
+                ActionFromBD = int.Parse(DatosControl[0]);
+            }
+            else
+            {
+                print("Server Error (Remote Control): (" + ActionQuery.error + ")");
+            }
+
+            yield return new WaitForSeconds(0.1f);
+        }
+
+    }
+
+    static public IEnumerator CR_SendToServer(string option, int value, int num)
+    {
+        //Send to server: accion(0=inner / 1=down / 2=up / 3=right / 4=left / 5=ok)
+        //flag(1=true / 0=false)
+        //leer-accion
+        WWW www;
+        WWWForm form;
+
+        form = new WWWForm();
+        form.AddField("opcion", option);
+        form.AddField("value", value);
+        form.AddField("numerocanal", num);
+
+        www = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+
+        yield return www;
+
+        if (www.error == null)
+        {
+            print("Successful Insert: (" + option + " : " + value + ")");
+            print(www.text);
+        }
+        else
+        {
+            print("Error inserting row");
+        }
+
+        yield break; 
+    }
+
+    /*
+    public int ChannelID;
+    public string ChannelName;
+    public int rowID;
+    public int programID;
+    public string programName;
+    public string programInfo;
+    public int programDuration;
+    public int programPosition;
+    public int ChannelIDInsert;
     bool ReadyInsertCanal;
+    public string[] stringArray;
     private IEnumerator InsertCanal()
     {
         string aux;
         ReadyInsertCanal = false;
         WWWForm form = new WWWForm();
+
         form.AddField("opcion", "canales");
-        for (int i = 0; i < a.Length; i++)
+
+        for (int i = 0; i < stringArray.Length; i++)
         {
-            form.AddField("canalData[]", a[i]);
+            form.AddField("canalData[]", stringArray[i]);
         }
 
         WWW www = new WWW("https://commendable-rigs.000webhostapp.com/insertarProgramacion.php", form);
         yield return www;
+
         aux = www.text;
-        print(aux);
+
         ReadyInsertCanal = true;
+
         yield break;
     }
-
     private IEnumerator Insert()
     {
-        /*
+        //Canales
         List<string> L;
         L = new List<string>();
         for (int i = 0; i < 12; i++)
@@ -103,11 +407,12 @@ public class ETVServerManager : MonoBehaviour
             ChannelName = "Canal" + (i + 1);
             L.Add("Canal" + (i + 1));
         }
-        a = L.ToArray();
+        stringArray = L.ToArray();
 
         StartCoroutine(InsertCanal());
         yield return new WaitUntil(() => ReadyInsertCanal);
-        */
+
+        //Programacion
         int Lenght = ListCanales.Count();
         rowID = 0;
         programID = 0;
@@ -166,194 +471,5 @@ public class ETVServerManager : MonoBehaviour
         print("Insert");
         yield break;
     }
-
-    public void ParseCanales()
-    {
-        string[] items;
-        items = CanalesFromBD.Split(';');
-
-        for (int i = 0; i < items.Length - 1; i++)
-        {
-            ListCanales.Add(new Canal(int.Parse(AuxFunctions.GetDataValue(items[i], "id:")), AuxFunctions.GetDataValue(items[i], "nombre:")));
-        }
-
-        ChGuideScrpt.CanalesFromBD = ListCanales;
-        /*
-        List<Canal> aux, aux2;
-        aux = new List<Canal>();
-        aux2 = new List<Canal>();
-        aux.AddRange(ListCanales);
-        foreach (var item in ListCanales)
-        {
-            print(item.id + "/" + item.nombre);
-        }
-        aux.Add(new Canal(22, "pene"));
-        aux2 = aux;
-        print(aux == ListCanales);
-        */
-    }
-    private string Canales;
-    private string CanalesFromBD
-    {
-        get
-        {
-            return Canales;
-        }
-
-        set
-        {
-            if (AuxFunctions.ValueChanged("Canales", Canales, value))
-            {
-                Canales = value;
-                ParseCanales();
-            }
-        }
-    }
-    bool ReadyCanales;
-    private IEnumerator ReadCanales()
-    {
-        ReadyCanales = false;
-
-        WWWForm form = new WWWForm();
-
-        form.AddField("opcion", "canales");
-
-        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/RevisarProgramacion.php", form);
-
-        yield return www;
-
-        if(www.error == null)
-            CanalesFromBD = www.text;
-
-        //print(Canales);
-        ReadyCanales = true;
-        print("Ready Reading Canales");
-        yield break;
-    }
-
-    public bool ReadyProgramation;
-    public string ProgramacionFromBD;
-    public void ParseProgramacion(string programacion)
-    {
-        string[] items;
-        items = programacion.Split(';');
-
-        for (int i = 0; i < items.Length - 1; i++)
-        {
-            ListProgramas.Add(
-                new Programa(
-                    int.Parse(AuxFunctions.GetDataValue(items[i], "id:")), 
-                    AuxFunctions.GetDataValue(items[i],"nombre:"),
-                    AuxFunctions.GetDataValue(items[i], "info:"),
-                    int.Parse(AuxFunctions.GetDataValue(items[i], "duracion:")),
-                    int.Parse(AuxFunctions.GetDataValue(items[i], "posicion:"))
-                )
-            );
-                
-        }
-
-        ChGuideScrpt.Programacion = ListProgramas;
-
-    }
-    public void GetProgramas(int CanalID)
-    {
-        ReadyProgramation = false;
-        StartCoroutine(CO_ReadProgramation(CanalID));
-    }
-    private IEnumerator CO_ReadProgramation(int CanalID)
-    {
-        ReadyProgramation = false;
-
-        WWWForm form = new WWWForm();
-
-        form.AddField("opcion", "programacion");
-        form.AddField("canalProgramacion", CanalID);
-
-        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/RevisarProgramacion.php", form);
-
-        yield return www;
-
-        if (www.error == null)
-        {
-            ParseProgramacion(www.text);
-        }
-        else
-            print("Error");
-
-        yield return new WaitForSeconds(0.1f);
-
-        //print("Leida programacion de Canal=" + CanalID);
-
-        ReadyProgramation = true;
-        
-        yield break;
-    }
-
-
-    public bool Up, Down, Right, Left;
-    private string RemoteControl;
-    private string RemoteControlFromBD
-    {
-        get
-        {
-            return RemoteControl;
-        }
-
-        set
-        {
-            if (AuxFunctions.ValueChanged("remote", RemoteControl, value))
-            {
-                RemoteControl = value;
-                ParseRemoteControl();
-            }
-        }
-    }
-    private void ParseRemoteControl()
-    {
-        string[] items;
-
-        items = RemoteControl.Split(';');
-
-        Down = bool.Parse(AuxFunctions.GetDataValue(items[0], "down:"));
-        Up = bool.Parse(AuxFunctions.GetDataValue(items[0], "up:"));
-        Left = bool.Parse(AuxFunctions.GetDataValue(items[0], "left:"));
-        Right = bool.Parse(AuxFunctions.GetDataValue(items[0], "right:"));
-    }
-    private IEnumerator CR_GetRemoteControl()
-    {
-        WWW RemoteControlQuery;
-
-        while (true)
-        {
-            RemoteControlQuery = new WWW("https://commendable-rigs.000webhostapp.com/revisarControlRemoto.php");
-            //WWW zoomQuery = new WWW("http://localhost/indicadores/revisarElementos.php");
-
-            yield return RemoteControlQuery;
-
-            if (RemoteControlQuery.error == null)
-            {
-                RemoteControlFromBD = RemoteControlQuery.text;
-            }
-            else
-            {
-                print("Server Error (Remote Control): (" + RemoteControlQuery.error + ")");
-            }
-
-            yield return new WaitForSeconds(1.0f);
-        }
-
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
+    */
 }
