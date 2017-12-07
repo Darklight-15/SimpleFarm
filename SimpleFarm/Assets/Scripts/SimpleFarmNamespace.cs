@@ -7,6 +7,30 @@ using System.Collections;
 
 namespace SimpleFarmNamespace{
 
+    public class Macros
+    {
+        static public string SitePath;
+        static public int ElemsShow;
+        static public string ChannelsContainer;
+        static public string ChannelsGuide;
+        static public string Controller;
+        static public string SingleView;
+        static public string EvSystem;
+        
+        static Macros()
+        {
+            //SitePath = "https://bhutan-slave.000webhostapp.com";
+            SitePath = "https://localhost/SF_Services";
+            //SitePath = "http://www.smesolutionslab.com/unity/simplefarm/";
+            ElemsShow = 8;
+            ChannelsContainer = "ChannelsContainerGrid";
+            ChannelsGuide = "ChannelsGuide";
+            Controller = "Controller";
+            SingleView = "SingleView";
+            EvSystem = "EventSystem";
+        } 
+    }
+
     public interface IBasicInterface{
 
         void Initialize();

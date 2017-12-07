@@ -8,26 +8,14 @@ public class RemoteControl : MonoBehaviour {
 
     //Remote Control
 
-    private int Action;
+    public bool ServerActive;
+    public bool SendComplete;
 
-    private string RC;
+    public string RC; //Remote control variable
 
-    public int NumCanal;
-    public int NumCanalFromBD
-    {
-        get
-        {
-            return NumCanal;
-        }
+    public int Action;
 
-        set
-        {
-            if (NumCanal != value)
-            {
-                NumCanal = value;
-            }
-        }
-    }
+    public int Value;
 
     //Debugging Control
 
@@ -37,9 +25,12 @@ public class RemoteControl : MonoBehaviour {
     private Button down;
     private Button ok;
     private Button back;
+    private Button ddown;
+    private Button dup;
 
     private void Update()
     {
+        /*
         print("RC ACTION: " + Action);
 
         if(Action == 0)
@@ -49,66 +40,112 @@ public class RemoteControl : MonoBehaviour {
         {
             BlockMove(false);
         }
+        */
     }
 
     void Start () {
-        Initialize();
+        StartCoroutine(Initialize());
     }
 
-    public void Initialize()
+    public IEnumerator Initialize()
     {
+        ServerActive = false;
+        SendComplete = false;
+
         RC = "";
+
         StartCoroutine(CR_GetAction());
 
+        yield return new WaitUntil(() => ServerActive);
+
+        print("RC: Server respond");
+
         down = GameObject.Find("Down-btn").GetComponent<Button>();
-        down.onClick.AddListener(() => StartCoroutine(WaitForInner(1)));
+        down.onClick.AddListener(() => StartCoroutine(WaitForInner(1, 0)));
+
+        ddown = GameObject.Find("DDown-btn").GetComponent<Button>();
+        ddown.onClick.AddListener(() => StartCoroutine(WaitForInner(1, 1)));
 
         up = GameObject.Find("Up-btn").GetComponent<Button>();
-        up.onClick.AddListener(() => StartCoroutine(WaitForInner(2)));
+        up.onClick.AddListener(() => StartCoroutine(WaitForInner(2, 0)));
+
+        dup = GameObject.Find("DUp-btn").GetComponent<Button>();
+        dup.onClick.AddListener(() => StartCoroutine(WaitForInner(2, 1)));
 
         right = GameObject.Find("Right-btn").GetComponent<Button>();
-        right.onClick.AddListener(() => StartCoroutine(WaitForInner(3)));
+        right.onClick.AddListener(() => StartCoroutine(WaitForInner(3, 0)));
 
         left = GameObject.Find("Left-btn").GetComponent<Button>();
-        left.onClick.AddListener(() => StartCoroutine(WaitForInner(4)));
+        left.onClick.AddListener(() => StartCoroutine(WaitForInner(4, 0)));
 
         ok = GameObject.Find("Ok-btn").GetComponent<Button>();
-        ok.onClick.AddListener(() => StartCoroutine(WaitForInner(5)));
+        ok.onClick.AddListener(() => StartCoroutine(WaitForInner(5, 0)));
 
         back = GameObject.Find("Back-btn").GetComponent<Button>();
-        back.onClick.AddListener(() => StartCoroutine(WaitForInner(6)));
+        back.onClick.AddListener(() => StartCoroutine(WaitForInner(6, 0)));
+
+        yield break;
     }
 
-    public void BlockMove(bool state)
+    public IEnumerator WaitForInner(int dir, int val)
+    {
+        MoveEnabled(false);
+
+        SendComplete = false;
+
+        StartCoroutine(CR_SendToServer("insertar-accion", dir, val));
+
+        yield return new WaitUntil(() => SendComplete);
+
+        yield return new WaitUntil(() => (Action == 0));
+
+        MoveEnabled(true);
+
+        SendComplete = false;
+
+        yield break;
+    }
+
+    public void MoveEnabled(bool state)
     {
         right.interactable = state;
         left.interactable = state;
         up.interactable = state;
+        dup.interactable = state;
         down.interactable = state;
+        ddown.interactable = state;
         ok.interactable = state;
         back.interactable = state;
     }
 
-    public void SetRC(int accion)
+    public IEnumerator CR_SendToServer(string option, int action, int value)
     {
-        StartCoroutine(ETVServerManager.CR_SendToServer("insertar-accion", accion, 0));
-    }
+        //Send to server: accion(0=inner / 1=down / 2=up / 3=right / 4=left / 5=ok)
+        //flag(1=true / 0=false)
+        //leer-accion
+        WWW www;
+        WWWForm form;
 
-    public IEnumerator WaitForInner(int accion)
-    {
-        /*
-        BlockMove(false);
-        */
+        form = new WWWForm();
+        form.AddField("opcion", option);
+        form.AddField("value", action);
+        form.AddField("numerocanal", value);
 
-        SetRC(accion);
+        www = new WWW(Macros.SitePath + "/ControlRemoto.php", form);
 
-        yield return new WaitUntil(()=> Action != 0);
+        yield return www;
 
-        /*
-        yield return new WaitUntil(()=> Action == 0);
-        
-        BlockMove(true);
-        */
+        if (www.error == null)
+        {
+            //print("RC: Successful Insert: (" + option + " : " + action + ")");
+            SendComplete = true;    
+        }
+        else
+        {
+            print("RC: Error inserting row");
+            SendComplete = false;
+        }
+
         yield break;
     }
 
@@ -125,28 +162,35 @@ public class RemoteControl : MonoBehaviour {
         while (true)
         {
             
-            ActionQuery = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
-            //WWW zoomQuery = new WWW("http://localhost/indicadores/revisarElementos.php");
+            ActionQuery = new WWW(Macros.SitePath + "/ControlRemoto.php", form );
+            //ActionQuery = new WWW("http://localhost/SF_Services/ControlRemoto.php");
 
             yield return ActionQuery;
 
             if (ActionQuery.error == null)
             {
+                ServerActive = true;
+
                 if(RC != ActionQuery.text)
                 {
                     RC = ActionQuery.text;
                     //Parse
+                    //print(ActionQuery.text);
                     RCdata = ActionQuery.text.ToString().Split(new string[] { "-" }, StringSplitOptions.None);
+                    //print("RC: " + RCdata[0]);
                     Action = int.Parse(RCdata[0]);
-                    NumCanalFromBD = int.Parse(RCdata[1]);
+                    Value = int.Parse(RCdata[1]);
                 }
             }
             else
             {
-                print("Server Error (Remote Control): (" + ActionQuery.error + ")");
+                ServerActive = false;
+                print("RC: Server Error (Remote Control): (" + ActionQuery.error + ")");
             }
+
             yield return null;
         }
 
     }
+
 }

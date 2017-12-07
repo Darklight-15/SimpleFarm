@@ -19,22 +19,21 @@ public class ETVServerManager : MonoBehaviour
 
         set
         {
-
-            if (AuxFunctions.ValueChanged("online", Online, value))//Change ui online status
+            if (Online != value)//Change ui online status
             {
                 Online = value;
 
                 ChGhideScript.Online = value;
 
-                if (value == true)
+                if (value)
                 {
                     OnlineUI.text = "Online";
-                    AuxFunctions.ChangeColor("Online", AuxFunctions.ConvertColorRGBA(103, 221, 127, 1), 1f);
+                    AuxFunctions.ChangeColor("Canvas/Online", AuxFunctions.ConvertColorRGBA(103, 221, 127, 1), 1f);
                 }
                 else
                 {
                     OnlineUI.text = "Offline";
-                    AuxFunctions.ChangeColor("Online", AuxFunctions.ConvertColorRGBA(247, 125, 115, 1), 1f);
+                    AuxFunctions.ChangeColor("Canvas/Online", AuxFunctions.ConvertColorRGBA(247, 125, 115, 1), 1f);
                 }
             }
         }
@@ -106,7 +105,7 @@ public class ETVServerManager : MonoBehaviour
             if(NumCanal != value)
             {
                 NumCanal = value;
-                ChGhideScript.NumCanalFromBD = NumCanal;
+                ChGhideScript.OptionValueFromBD = NumCanal;
             }
         }
     }
@@ -119,7 +118,7 @@ public class ETVServerManager : MonoBehaviour
 
     private void Update()
     {
-        print("Server Action: " + Action);
+        //print("Server Action: " + Action);
     }
 
     public void Play()
@@ -186,6 +185,7 @@ public class ETVServerManager : MonoBehaviour
     public void ParseCanales()
     {
         string[] items;
+
         items = CanalesFromBD.Split(';');
 
         for (int i = 0; i < items.Length - 1; i++)
@@ -199,8 +199,12 @@ public class ETVServerManager : MonoBehaviour
     public void ParseProgramacion(string programacion, string type)
     {
         string[] items;
+
         items = programacion.Split(';');
-        ListProgramas.Clear();
+
+        if(ListProgramas.Count > 0)
+            ListProgramas.Clear();
+
         for (int i = 0; i < items.Length - 1; i++)
         {
             ListProgramas.Add(
@@ -226,12 +230,6 @@ public class ETVServerManager : MonoBehaviour
         }
     }
 
-    public void GetProgramation(int CanalID, string type)
-    {
-        ReadyProgramation = false;
-        StartCoroutine(CR_GetProgramation(CanalID, type));
-    }
-
     //Server Talk
     
     private IEnumerator CR_GetOnline()
@@ -240,7 +238,7 @@ public class ETVServerManager : MonoBehaviour
 
         while (true)
         {
-            OnlineStatus = new WWW("https://commendable-rigs.000webhostapp.com");
+            OnlineStatus = new WWW(Macros.SitePath);
 
             yield return OnlineStatus;
 
@@ -263,16 +261,22 @@ public class ETVServerManager : MonoBehaviour
 
         form.AddField("opcion", "leer-canales");
 
-        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+        WWW www = new WWW(Macros.SitePath + "/ControlRemoto.php", form);
 
         yield return www;
 
         if (www.error == null)
             CanalesFromBD = www.text;
-            
+
         ReadyCanales = true;
 
         yield break;
+    }
+
+    public void GetProgramation(int CanalID, string type)
+    {
+        ReadyProgramation = false;
+        StartCoroutine(CR_GetProgramation(CanalID, type));
     }
 
     private IEnumerator CR_GetProgramation(int CanalID, string type)
@@ -282,7 +286,7 @@ public class ETVServerManager : MonoBehaviour
         form.AddField("opcion", "leer-programacion");
         form.AddField("canalProgramacion", CanalID);
 
-        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+        WWW www = new WWW(Macros.SitePath + "/ControlRemoto.php", form);
 
         yield return www;
 
@@ -291,7 +295,7 @@ public class ETVServerManager : MonoBehaviour
             ParseProgramacion(www.text, type);
         }
         else
-            print("Error");
+            print("Instantiate programation error");
 
         yield return new WaitForSeconds(0.1f);
 
@@ -311,7 +315,8 @@ public class ETVServerManager : MonoBehaviour
 
         while (true)
         {
-            ActionQuery = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+            ActionQuery = new WWW(Macros.SitePath + "/ControlRemoto.php", form);
+
             //WWW zoomQuery = new WWW("http://localhost/indicadores/revisarElementos.php");
 
             yield return ActionQuery;
@@ -332,7 +337,7 @@ public class ETVServerManager : MonoBehaviour
 
     }
 
-    static public IEnumerator CR_SendToServer(string option, int value, int num)
+    static public IEnumerator CR_SendToServer(string option, int action, int value)
     {
         //Send to server: accion(0=inner / 1=down / 2=up / 3=right / 4=left / 5=ok)
         //flag(1=true / 0=false)
@@ -342,17 +347,16 @@ public class ETVServerManager : MonoBehaviour
 
         form = new WWWForm();
         form.AddField("opcion", option);
-        form.AddField("value", value);
-        form.AddField("numerocanal", num);
+        form.AddField("value", action);
+        form.AddField("numerocanal", value);
 
-        www = new WWW("https://commendable-rigs.000webhostapp.com/ControlRemoto.php", form);
+        www = new WWW(Macros.SitePath + "/ControlRemoto.php", form);
 
         yield return www;
 
         if (www.error == null)
         {
-            print("Successful Insert: (" + option + " : " + value + ")");
-            print(www.text);
+            //print("Successful Insert: (" + option + " : " + action + ")");
         }
         else
         {
@@ -387,7 +391,7 @@ public class ETVServerManager : MonoBehaviour
             form.AddField("canalData[]", stringArray[i]);
         }
 
-        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/insertarProgramacion.php", form);
+        WWW www = new WWW("https://bhutan-slave.000webhostapp.com/insertarProgramacion.php", form);
         yield return www;
 
         aux = www.text;
@@ -458,7 +462,7 @@ public class ETVServerManager : MonoBehaviour
         form.AddField("programPosition", programPosition);
 
         print("Row: " + rowID + "ChannelID: " + ChannelIDInsert +"/"+ programID);
-        WWW www = new WWW("https://commendable-rigs.000webhostapp.com/insertarProgramacion.php", form);
+        WWW www = new WWW("https://bhutan-slave.000webhostapp.com/insertarProgramacion.php", form);
 
         yield return www;
 

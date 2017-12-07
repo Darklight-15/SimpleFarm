@@ -107,6 +107,7 @@
     <Compile Include="Assets\Scripts\ProgramScript.cs" />
     <Compile Include="Assets\Scripts\RemoteControl.cs" />
     <Compile Include="Assets\Scripts\SimpleFarmNamespace.cs" />
+    <Compile Include="Assets\Test.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

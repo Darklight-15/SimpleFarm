@@ -11,7 +11,15 @@ public class ETVWindowManager : MonoBehaviour {
     {
         try
         {
-            GameObject.Find(elemPath).GetComponent<Text>().text = content;
+            GameObject obj = GameObject.Find(elemPath);
+
+            if (obj.GetComponent<Text>())
+            {
+                GameObject.Find(elemPath).GetComponent<Text>().text = content;
+            }else
+            {
+                GameObject.Find(elemPath).GetComponentInChildren<Text>().text = content;
+            }
         }
         catch (Exception e)
         {
@@ -28,16 +36,18 @@ public class ETVWindowManager : MonoBehaviour {
         string path = AuxFunctions.GetGameObjectPath(ref prefabClone);
 
         if (content != "")
+        {
             ChangeText(path, content);
-
+        }
+            
         switch (type)
         {
             case "temporal":
-                StartCoroutine(ShowInDuration(prefabClone.name, duration, fadeTime));
+                StartCoroutine(ShowInDuration(path, duration, fadeTime));
                 break;
 
             case "static":
-                StartCoroutine(FadeIn(prefabClone.name, 0.5f));
+                StartCoroutine(FadeIn(path, 0.5f));
                 GameObject.Find("close-btn").GetComponent<Button>().onClick.AddListener(() => Destroy(GameObject.Find(GameObject.Find("close-btn").transform.parent.name)));
                 break;
         }

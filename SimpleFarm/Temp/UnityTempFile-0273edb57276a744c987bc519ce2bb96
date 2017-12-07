@@ -107,10 +107,11 @@ Assets/OtherScripts/WindowManager.cs
 Assets/Scripts/ChannelScript.cs
 Assets/Scripts/ChannelsGuide.cs
 Assets/Scripts/ETVServerManager.cs
+Assets/Scripts/ETVWindowManager.cs
 Assets/Scripts/ProgramScript.cs
 Assets/Scripts/RemoteControl.cs
 Assets/Scripts/SimpleFarmNamespace.cs
-Assets/Scripts/WindowManager.cs
+Assets/Test.cs
 -r:"C:\Program Files\Unity\Editor\Data\Mono\lib\mono\unity\System.Runtime.Serialization.dll"
 -r:"C:\Program Files\Unity\Editor\Data\Mono\lib\mono\unity\System.Xml.Linq.dll"
 -r:"C:\Program Files\Unity\Editor\Data\Mono\lib\mono\unity\UnityScript.dll"
